@@ -95,7 +95,8 @@ ensureEnv({
   defaults: {
     NODE_ENV: "development",
     PORT: "4000",
-    DATABASE_URL: "postgres://ecashengine:ecashengine@localhost:5432/ecashengine",
+    DATABASE_PATH: "/host-data/db.sqlite3",
+    UPLOAD_DIR: "/host-data/media",
     REDIS_URL: "redis://localhost:6379",
     CORS_ORIGIN: "http://localhost:3000",
     SITE_URL: "http://localhost:3000",

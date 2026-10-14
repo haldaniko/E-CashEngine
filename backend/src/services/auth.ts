@@ -36,9 +36,10 @@ export async function login(email: string, password: string) {
   const refreshToken = crypto.randomBytes(48).toString('base64url');
   const csrfToken = crypto.randomBytes(24).toString('base64url');
   await query(
-    `INSERT INTO refresh_tokens (user_id, token_hash, csrf_token, expires_at)
-     VALUES ($1, $2, $3, now() + ($4 || ' days')::interval)`,
-    [user.id, hashToken(refreshToken), csrfToken, refreshDays],
+    `INSERT INTO refresh_tokens (id, user_id, token_hash, csrf_token, expires_at)
+     VALUES ($1, $2, $3, $4, $5)`,
+    [crypto.randomUUID(), user.id, hashToken(refreshToken), csrfToken,
+      new Date(Date.now() + refreshDays * 86400000).toISOString()],
   );
   return { user: { id: user.id, email: user.email, role: user.role }, accessToken, refreshToken, csrfToken };
 }
@@ -49,8 +50,8 @@ export async function refreshSession(refreshToken: string, csrfToken: string | u
     `SELECT rt.*, u.email, u.role
      FROM refresh_tokens rt
      JOIN users u ON u.id = rt.user_id
-     WHERE rt.token_hash = $1 AND rt.expires_at > now()`,
-    [hashToken(refreshToken)],
+     WHERE rt.token_hash = $1 AND rt.expires_at > $2`,
+    [hashToken(refreshToken), new Date().toISOString()],
   );
   const row = result.rows[0];
   if (!row || row.csrf_token !== csrfToken) return null;

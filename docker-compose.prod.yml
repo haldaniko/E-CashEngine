@@ -2,14 +2,12 @@ services:
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    env_file:
+      - ./.env.production
     volumes:
       - ecashengine_prod_postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 10s
       timeout: 5s
       retries: 20
@@ -23,6 +21,29 @@ services:
       timeout: 5s
       retries: 20
 
+  import-legacy-data:
+    image: ecashengine-backend-prod
+    build:
+      context: ./backend
+      target: prod
+    command: node scripts/import-postgres.mjs
+    restart: "no"
+    volumes:
+      - ./:/host-data
+      - ecashengine_prod_uploads:/legacy-uploads:ro
+    env_file:
+      - ./.env.production
+      - path: ./backend/.env.production
+        required: false
+    environment:
+      NODE_ENV: production
+      HOST_DATA_DIR: /host-data
+      LEGACY_UPLOAD_DIR: /legacy-uploads
+      PGHOST: postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   backend:
     image: ecashengine-backend-prod
     build:
@@ -32,20 +53,21 @@ services:
     ports:
       - "4105:4000"
     volumes:
-      - ecashengine_prod_uploads:/app/uploads
+      - ./:/host-data
     env_file:
       - path: ./backend/.env.production
         required: false
     environment:
       NODE_ENV: production
-      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      DATABASE_PATH: /host-data/db.sqlite3
+      UPLOAD_DIR: /host-data/media
       REDIS_URL: redis://redis:6379
       GENERATION_TIMEZONE: ${GENERATION_TIMEZONE:-Europe/Sofia}
     depends_on:
-      postgres:
-        condition: service_healthy
       redis:
         condition: service_healthy
+      import-legacy-data:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:4000/api/health || exit 1"]
       interval: 10s
@@ -70,21 +92,6 @@ services:
     depends_on:
       backend:
         condition: service_healthy
-
-  admin-seed:
-    image: ecashengine-backend-prod
-    env_file:
-      - path: ./backend/.env.production
-        required: false
-    environment:
-      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
-      LOCAL_SUPERADMIN_EMAIL: ${LOCAL_SUPERADMIN_EMAIL}
-      SUPERADMIN_PASSWORD: ${LOCAL_SUPERADMIN_PASSWORD}
-    command: ["sh", "-c", "npm run create-superadmin -- \"$LOCAL_SUPERADMIN_EMAIL\""]
-    depends_on:
-      postgres:
-        condition: service_healthy
-    restart: "no"
 
 volumes:
   ecashengine_prod_postgres_data:

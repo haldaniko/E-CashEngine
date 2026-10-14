@@ -1,12 +1,12 @@
 # E-CashEngine
 
-Production-ready full-stack blog with admin publishing, AI article generation, PostgreSQL runtime storage, secure admin auth, Docker dev/prod environments, and CI.
+Full-stack blog with admin publishing, AI article generation, SQLite runtime storage, secure admin auth, and Docker dev/prod environments.
 
 ## Stack
 
 - Frontend: Vite, React, TypeScript, SCSS
 - Backend: Node.js, Express, TypeScript
-- Database: PostgreSQL
+- Database: SQLite (`db.sqlite3` in the project root)
 - Service dependency: Redis
 - AI: OpenRouter API
 - Email/newsletter: Nodemailer SMTP-ready env
@@ -16,18 +16,18 @@ Production-ready full-stack blog with admin publishing, AI article generation, P
 
 - `backend/src/index.ts` wires middleware, routes, scheduler, schema bootstrap, and error handling.
 - `backend/src/routes/*` contains API route modules wrapped with `asyncHandler`.
-- `backend/src/services/*` contains PostgreSQL stores, auth, OpenRouter, sanitization, audit logging, and scheduler logic.
+- `backend/src/services/*` contains SQLite stores, auth, OpenRouter, sanitization, audit logging, and scheduler logic.
 - `frontend/src/App.tsx` contains the small SPA router, pages, and reusable UI sections.
 - `frontend/src/styles.scss` contains the e-CashEngine visual system.
 
-Runtime data lives in PostgreSQL, not JSON files or container filesystems.
+Production runtime data lives in root-level `db.sqlite3` and `media/` on the Linux host. The old PostgreSQL and uploads volumes remain available to the import service; the backend uses SQLite after import.
 
 ## Features
 
 - Blog list, search, article pages, newsletter, and admin UI
 - Newsletter subscription endpoint
 - Admin login with JWT access token and httpOnly refresh cookie
-- Refresh token hashes stored in PostgreSQL
+- Refresh token hashes stored in SQLite
 - CSRF check on refresh
 - CRUD for generated/admin posts
 - Upload, select, and reuse article cover images
@@ -56,7 +56,7 @@ Services:
 
 - Frontend: `http://localhost:3000`
 - Backend: `http://localhost:4000`
-- PostgreSQL and Redis run inside Docker.
+- Redis runs inside Docker; SQLite and uploaded images live in the project root on the host.
 
 The `admin-seed` service creates a local superadmin and may exit with code `0`. Defaults:
 
@@ -75,11 +75,11 @@ npm install
 npm run create-superadmin
 ```
 
-Admin users are stored in PostgreSQL. The app does not use `ADMIN_USERNAME`, `ADMIN_PASSWORD`, or `ADMIN_PASSWORD_HASH` for runtime login.
+Admin users are stored in SQLite. The app does not use `ADMIN_USERNAME`, `ADMIN_PASSWORD`, or `ADMIN_PASSWORD_HASH` for runtime login.
 
 ## Auth Troubleshooting
 
-- `Invalid email or password`: run `npm run create-superadmin` with the same `DATABASE_URL`.
+- `Invalid email or password`: run `npm run create-superadmin` with the same `DATABASE_PATH`.
 - `Session expired`: sign in again; access tokens are intentionally short-lived.
 - Refresh requires the httpOnly cookie and `x-csrf-token`.
 - In production, `JWT_SECRET` and `REFRESH_TOKEN_SECRET` must be different, stable, and at least 32 characters.
@@ -97,7 +97,7 @@ npm run setup:prod-env
 
 Edit:
 
-- root `.env.production` for PostgreSQL and public frontend URLs
+- root `.env.production` for one-time PostgreSQL import credentials and public frontend URLs
 - `backend/.env.production` for backend secrets, CORS, OpenRouter, SMTP
 - root `.env.production` uses `VITE_API_URL` for the browser API endpoint and `VITE_GA_MEASUREMENT_ID` for Google Analytics.
 
@@ -105,20 +105,22 @@ Production refuses to start if required secrets are missing, equal, too short, o
 
 ## Production Deployment Docker
 
+For the first deployment from the old PostgreSQL version, follow [the server migration guide](MIGRATION_TO_SQLITE.ru.md). Once `.env.production` has been copied to the ignored root `.env`, the first import and later deployments use the same command:
+
 ```bash
-docker compose --env-file .env.production -f docker-compose.prod.yml up --build -d
+docker compose -f docker-compose.prod.yml up --build -d
 ```
 
 Production ports:
 
 - Frontend: host `8100` -> container `3000`
 - Backend: host `4105` -> container `4000`
-- PostgreSQL and Redis are not published to the host.
-- Uploaded covers are stored in the `ecashengine_prod_uploads` Docker volume.
+- PostgreSQL and Redis are not published to the host. PostgreSQL stays in Compose for the import dependency; the running backend reads and writes only SQLite.
+- Uploaded covers are stored in root-level `media/covers` on the Linux host.
 
 ## Local Development Without Docker
 
-Start PostgreSQL and Redis locally, then:
+Start Redis locally, then:
 
 ```bash
 cd backend
@@ -157,7 +159,7 @@ npm run dev
 
 ## Backups
 
-PostgreSQL volumes hold users, posts, settings, subscribers, refresh tokens, and audit events. `docker compose up -d --build` is safe for data. `docker compose down -v` deletes the database volume. Use PostgreSQL backups or managed Postgres for production.
+Back up `db.sqlite3` and `media/` together. Regular `docker compose up -d --build` keeps these host files. The old PostgreSQL and uploads volumes should be retained until the import and backup have been verified.
 
 ## Verification
 
