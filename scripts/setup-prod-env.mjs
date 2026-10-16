@@ -9,7 +9,7 @@ if (fs.existsSync(file)) {
   const content = `POSTGRES_DB=ecashengine
 POSTGRES_USER=ecashengine
 POSTGRES_PASSWORD=${secret()}
-VITE_API_URL=https://api.example.com
+VITE_API_URL=https://e-cashingengine.com
 `;
 
   fs.writeFileSync(file, content, { mode: 0o600 });
@@ -22,13 +22,14 @@ if (!fs.existsSync(backendFile)) {
   const backendContent = `NODE_ENV=production
 PORT=4000
 REDIS_URL=redis://redis:6379
-CORS_ORIGIN=https://example.com
-SITE_URL=https://example.com
+CORS_ORIGIN=https://e-cashingengine.com
+SITE_URL=https://e-cashingengine.com
+BOT_INTEGRATION_TOKEN=${secret()}
 JWT_SECRET=${secret()}
 REFRESH_TOKEN_SECRET=${secret()}
 OPENROUTER_API_KEY=
 OPENROUTER_MODEL=meta-llama/llama-3.1-8b-instruct
-OPENROUTER_SITE_URL=https://example.com
+OPENROUTER_SITE_URL=https://e-cashingengine.com
 OPENROUTER_TIMEOUT_MS=45000
 OPENROUTER_MAX_INPUT_CHARS=8000
 OPENROUTER_MAX_OUTPUT_TOKENS=1800

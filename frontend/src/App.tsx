@@ -55,7 +55,7 @@ function readFileAsDataUrl(file: File) {
 }
 
 function toArticle(post: Post, index = 0): Article {
-  const tag = post.tags[0] || (post.source === 'ai' ? 'AI Side Hustles' : 'Online Income');
+  const tag = post.source === 'bot' ? 'Online Income' : post.tags[0] || (post.source === 'ai' ? 'AI Side Hustles' : 'Online Income');
   return {
     ...post,
     cover: post.coverImage ? assetUrl(post.coverImage) : pickCover(post.slug || post.title),

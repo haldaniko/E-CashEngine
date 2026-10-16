@@ -36,6 +36,22 @@ Production runtime data lives in root-level `db.sqlite3` and `media/` on the Lin
 - OpenRouter generation with sanitized HTML before storage
 - Audit events for login, settings, post changes, and generation
 
+## Telegram editorial bot
+
+The site exposes `/api/bot/v1/` for the separate `tg-posting-integration` bot. Configure `BOT_INTEGRATION_TOKEN` in `backend/.env` for local development or `backend/.env.production` in production. It must match `ECASHINGENGINE_INTEGRATION_TOKEN` in the bot's `.env`; it is separate from the Telegram token and admin JWT. Set `SITE_URL` to the browser-facing site origin (`https://e-cashingengine.com` in production), and ensure the bot can reach `https://e-cashingengine.com/api/bot/v1/` over HTTPS. Never commit real secrets.
+
+The bot's site entry is:
+
+```json
+{"id":"ecashingengine","name":"e-CashEngine","api_base":"https://e-cashingengine.com/api/bot/v1/","token_env":"ECASHINGENGINE_INTEGRATION_TOKEN"}
+```
+
+`GET options/` offers the site's `online-income` category and no author choices. Bot `tag_names` are saved as post tags; the site does not have a separate author catalog, so `author_slug` must be null and the existing editorial byline is used. Article text is escaped and rendered as paragraphs. Drafts are hidden from the public post API until `POST articles/<external_id>/publish/`. The published URL is `/articles/<slug>` on `SITE_URL`.
+
+The SQLite schema bootstrap adds `generated_posts.category_slug` and the `bot_articles` UUID mapping. It runs automatically when the backend starts; retain the SQLite database across deploys and back it up before the first deployment. Bot covers are converted to WebP under `UPLOAD_DIR/covers` and served at `/uploads/covers/`. Production Compose mounts `UPLOAD_DIR=/host-data/media`, so the image survives container rebuilds. The reverse proxy must forward `/api/` and `/uploads/` to the backend, as in `nginx.sample`.
+
+Run `npm --prefix backend test` to verify authentication, draft and publication behavior, retries, image upload, and public post visibility. A production smoke check can call `GET /api/bot/v1/options/` with the integration token; it does not publish an article.
+
 ## Local Development Docker
 
 ```bash

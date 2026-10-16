@@ -1,6 +1,6 @@
 server {
   listen 80;
-  server_name example.com;
+  server_name e-cashingengine.com;
 
   location /api/ {
     proxy_pass http://127.0.0.1:4105/api/;

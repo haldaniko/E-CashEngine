@@ -109,7 +109,8 @@ ensureEnv({
   },
   generated: {
     JWT_SECRET: secret,
-    REFRESH_TOKEN_SECRET: secret
+    REFRESH_TOKEN_SECRET: secret,
+    BOT_INTEGRATION_TOKEN: secret
   },
   inherited: {
     OPENROUTER_API_KEY: rootEnv.get("OPENROUTER_API_KEY")
