@@ -9,4 +9,4 @@ Routes are handled inside `src/App.tsx`:
 - `/articles/:slug`
 - `/admin`
 
-The app uses `VITE_API_URL` to call the Express backend.
+The app uses `VITE_API_URL` from the project root `.env` to call the Express backend. Run `npm run setup:env` from the project root to create it from `.env.sample`.

@@ -1,12 +1,4 @@
 services:
-  env-setup:
-    image: node:20-alpine
-    working_dir: /app
-    volumes:
-      - ./:/app
-    command: node scripts/setup-dev-env.mjs
-    restart: "no"
-
   redis:
     image: redis:7-alpine
     healthcheck:
@@ -25,8 +17,7 @@ services:
     volumes:
       - ./:/host-data
     env_file:
-      - path: backend/.env
-        required: false
+      - ./.env
     environment:
       DATABASE_PATH: /host-data/db.sqlite3
       UPLOAD_DIR: /host-data/media
@@ -34,8 +25,6 @@ services:
       CORS_ORIGIN: http://localhost:3000
       GENERATION_TIMEZONE: Europe/Sofia
     depends_on:
-      env-setup:
-        condition: service_completed_successfully
       redis:
         condition: service_healthy
     healthcheck:
@@ -52,13 +41,10 @@ services:
     ports:
       - "3000:3000"
     env_file:
-      - path: frontend/.env
-        required: false
+      - ./.env
     environment:
-      VITE_API_URL: http://localhost:4000
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:4000}
     depends_on:
-      env-setup:
-        condition: service_completed_successfully
       backend:
         condition: service_healthy
 
@@ -67,16 +53,13 @@ services:
     volumes:
       - ./:/host-data
     env_file:
-      - path: backend/.env
-        required: false
+      - ./.env
     environment:
       DATABASE_PATH: /host-data/db.sqlite3
       LOCAL_SUPERADMIN_EMAIL: ${LOCAL_SUPERADMIN_EMAIL:-admin@ecashengine.local}
       LOCAL_SUPERADMIN_PASSWORD: ${LOCAL_SUPERADMIN_PASSWORD:-MySecretPassword123!}
     command: npm run create-superadmin
     depends_on:
-      env-setup:
-        condition: service_completed_successfully
       backend:
         condition: service_healthy
     restart: "no"

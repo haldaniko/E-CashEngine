@@ -38,7 +38,7 @@ Production runtime data lives in root-level `db.sqlite3` and `media/` on the Lin
 
 ## Telegram editorial bot
 
-The site exposes `/api/bot/v1/` for the separate `tg-posting-integration` bot. Configure `BOT_INTEGRATION_TOKEN` in `backend/.env` for local development or `backend/.env.production` in production. It must match `ECASHINGENGINE_INTEGRATION_TOKEN` in the bot's `.env`; it is separate from the Telegram token and admin JWT. Set `SITE_URL` to the browser-facing site origin (`https://e-cashingengine.com` in production), and ensure the bot can reach `https://e-cashingengine.com/api/bot/v1/` over HTTPS. Never commit real secrets.
+The site exposes `/api/bot/v1/` for the separate `tg-posting-integration` bot. Configure `BOT_INTEGRATION_TOKEN` in the root `.env` on each deployment. It must match `ECASHINGENGINE_INTEGRATION_TOKEN` in the bot's `.env`; it is separate from the Telegram token and admin JWT. Set `SITE_URL` to the browser-facing site origin (`https://e-cashingengine.com` in production), and ensure the bot can reach `https://e-cashingengine.com/api/bot/v1/` over HTTPS. Never commit real secrets.
 
 The bot's site entry is:
 
@@ -55,8 +55,7 @@ Run `npm --prefix backend test` to verify authentication, draft and publication 
 ## Local Development Docker
 
 ```bash
-cp backend/.env.example backend/.env
-cp frontend/.env.example frontend/.env
+npm run setup:env
 docker compose up -d --build
 ```
 
@@ -102,26 +101,21 @@ Admin users are stored in SQLite. The app does not use `ADMIN_USERNAME`, `ADMIN_
 
 ## Production Secrets
 
-Generate secrets:
+Create the single root environment file and generate missing secrets:
 
 ```bash
-npm run generate-secrets
-npm run setup:prod-env
+npm run setup:env
 ```
 
 `JWT_SECRET` signs short-lived access tokens. `REFRESH_TOKEN_SECRET` hashes refresh tokens before storage. Keep both stable across deploys; rotating them logs users out.
 
-Edit:
-
-- root `.env.production` for one-time PostgreSQL import credentials and public frontend URLs
-- `backend/.env.production` for backend secrets, CORS, OpenRouter, SMTP
-- root `.env.production` uses `VITE_API_URL` for the browser API endpoint and `VITE_GA_MEASUREMENT_ID` for Google Analytics.
+For production, edit the root `.env`: set `SITE_URL=https://e-cashingengine.com`, `CORS_ORIGIN=https://e-cashingengine.com`, `VITE_API_URL=https://e-cashingengine.com`, and `OPENROUTER_SITE_URL=https://e-cashingengine.com`. Preserve the generated secrets and any existing import credentials. Local and production deployments each keep their own private `.env`; `.env.sample` is the shared template. Compose sets `NODE_ENV` for each deployment. `VITE_API_URL` and `VITE_GA_MEASUREMENT_ID` are used for the browser build.
 
 Production refuses to start if required secrets are missing, equal, too short, or production URLs point to localhost.
 
 ## Production Deployment Docker
 
-For the first deployment from the old PostgreSQL version, follow [the server migration guide](MIGRATION_TO_SQLITE.ru.md). Once `.env.production` has been copied to the ignored root `.env`, the first import and later deployments use the same command:
+For the first deployment from the old PostgreSQL version, follow [the server migration guide](MIGRATION_TO_SQLITE.ru.md). The first import and later deployments use the same command:
 
 ```bash
 docker compose -f docker-compose.prod.yml up --build -d
@@ -136,18 +130,16 @@ Production ports:
 
 ## Local Development Without Docker
 
-Start Redis locally, then:
+Create the root `.env` with `npm run setup:env` and start Redis locally, then:
 
 ```bash
 cd backend
-cp .env.example .env
 npm install
 npm run dev
 ```
 
 ```bash
 cd frontend
-cp .env.example .env
 npm install
 npm run dev
 ```
@@ -187,7 +179,7 @@ docker compose up -d --build
 curl http://localhost:4000/api/health
 curl -I http://localhost:3000/
 curl http://localhost:4000/api/posts
-docker compose --env-file .env.production -f docker-compose.prod.yml config
+docker compose -f docker-compose.prod.yml config --services
 curl http://localhost:4105/api/health
 curl -I http://localhost:8100/
 ```

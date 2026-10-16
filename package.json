@@ -5,8 +5,7 @@
     "build": "npm --prefix backend run build && npm --prefix frontend run build",
     "docker:rebuild": "DOCKER_BUILDKIT=0 docker build -t ecashengine-backend-dev --target dev ./backend && DOCKER_BUILDKIT=0 docker build -t ecashengine-frontend-dev --target dev ./frontend && docker compose up -d --no-build",
     "generate-secrets": "npm --prefix backend run generate-secrets",
-    "setup:dev-env": "node scripts/setup-dev-env.mjs",
-    "dev:docker": "npm run setup:dev-env && docker compose up --build -d",
-    "setup:prod-env": "node scripts/setup-prod-env.mjs"
+    "setup:env": "node scripts/setup-env.mjs",
+    "dev:docker": "npm run setup:env && docker compose up --build -d"
   }
 }

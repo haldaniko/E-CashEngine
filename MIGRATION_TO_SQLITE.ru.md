@@ -17,7 +17,7 @@ docker volume inspect "${PROJECT}_ecashengine_prod_postgres_data" "${PROJECT}_ec
 Остановите старые веб-контейнеры, чтобы база и файлы не менялись во время снимка:
 
 ```bash
-docker compose -p "$PROJECT" --env-file .env.production -f docker-compose.prod.yml stop backend frontend
+docker compose -p "$PROJECT" --env-file .env -f docker-compose.prod.yml stop backend frontend
 ```
 
 Сохраните резервные копии за пределами проекта:
@@ -25,20 +25,21 @@ docker compose -p "$PROJECT" --env-file .env.production -f docker-compose.prod.y
 ```bash
 export BACKUP_DIR="../ecash-backup-$(date +%Y%m%d-%H%M%S)"
 mkdir -p "$BACKUP_DIR"
-docker compose -p "$PROJECT" --env-file .env.production -f docker-compose.prod.yml exec -T postgres sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' > "$BACKUP_DIR/postgres.dump"
+docker compose -p "$PROJECT" --env-file .env -f docker-compose.prod.yml exec -T postgres sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' > "$BACKUP_DIR/postgres.dump"
 docker run --rm -v "${PROJECT}_ecashengine_prod_uploads:/source:ro" alpine tar -C /source -czf - . > "$BACKUP_DIR/media.tar.gz"
 test -s "$BACKUP_DIR/postgres.dump" && test -s "$BACKUP_DIR/media.tar.gz"
 ```
 
-Разверните обновлённый код, сохранив существующие `.env.production` и `backend/.env.production`. Для запуска Compose **без `--env-file`** один раз подготовьте корневой `.env`:
+Разверните обновлённый код, сохранив корневой `.env`. Если сервер ещё использует старые `.env.production` и `backend/.env.production`, команда ниже перенесёт недостающие значения в корневой `.env`. Проверьте результат до удаления старых файлов:
 
 ```bash
-cp .env.production .env
+npm run setup:env
+test -f .env
 docker volume inspect "${PROJECT}_ecashengine_prod_postgres_data" "${PROJECT}_ecashengine_prod_uploads" >/dev/null
 docker compose -p "$PROJECT" -f docker-compose.prod.yml up --build -d
 ```
 
-Если корневой `.env` уже содержит нужные production-переменные, копирование не требуется. Не заменяйте его без предварительной проверки. В корне проекта не должно быть случайного `db.sqlite3`: при наличии этого файла импорт пропускается.
+Проверьте, что корневой `.env` содержит прежние секреты и production-адреса. Не заменяйте существующие секреты при переносе. В корне проекта не должно быть случайного `db.sqlite3`: при наличии этого файла импорт пропускается.
 
 Чтобы последующие команды были **буквально** `docker compose -f docker-compose.prod.yml up --build -d` без `-p`, запускайте их из каталога с тем же именем Compose project. Если старый проект запускался с `-p` или имя каталога изменилось, сохраняйте `-p "$PROJECT"` в команде: это необходимо для подключения именно старых volumes.
 

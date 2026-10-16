@@ -3,7 +3,7 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     env_file:
-      - ./.env.production
+      - ./.env
     volumes:
       - ecashengine_prod_postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -32,9 +32,7 @@ services:
       - ./:/host-data
       - ecashengine_prod_uploads:/legacy-uploads:ro
     env_file:
-      - ./.env.production
-      - path: ./backend/.env.production
-        required: false
+      - ./.env
     environment:
       NODE_ENV: production
       HOST_DATA_DIR: /host-data
@@ -55,8 +53,7 @@ services:
     volumes:
       - ./:/host-data
     env_file:
-      - path: ./backend/.env.production
-        required: false
+      - ./.env
     environment:
       NODE_ENV: production
       DATABASE_PATH: /host-data/db.sqlite3

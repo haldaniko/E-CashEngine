@@ -4,11 +4,9 @@ frontend/.next-build/
 dist/
 env.local
 *.log
-/.env
-/.env.production
-backend/.env
-backend/.env.production
-frontend/.env
+**/.env
+**/.env.*
+!/.env.sample
 backend/data/
 /db.sqlite3
 /db.sqlite3-*
