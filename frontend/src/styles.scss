@@ -11,6 +11,8 @@
   --shadow: 0 20px 60px rgba(55, 45, 32, 0.12);
 }
 
+html { scroll-behavior: smooth; }
+
 * { box-sizing: border-box; }
 body {
   margin: 0;
@@ -593,4 +595,120 @@ input, textarea, select {
 
 .share-link:hover {
   transform: translateY(-1px);
+}
+
+.book-section {
+  scroll-margin-top: 118px;
+  margin: 64px 0 34px;
+  display: grid;
+  grid-template-columns: minmax(300px, .78fr) minmax(0, 1.22fr);
+  gap: clamp(34px, 7vw, 88px);
+  align-items: center;
+  overflow: hidden;
+  border: 1px solid #d9c9aa;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #efe5d1 0%, #fffaf0 48%, #e7f3ef 100%);
+  padding: clamp(28px, 5vw, 66px);
+  box-shadow: 0 30px 90px rgba(55, 45, 32, .15);
+}
+.book-visual {
+  min-height: 480px;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 320px);
+  justify-content: center;
+  filter: drop-shadow(22px 28px 28px rgba(34, 28, 21, .24));
+  transform: perspective(900px) rotateY(8deg) rotateZ(-1.5deg);
+}
+.book-spine {
+  border-radius: 8px 0 0 8px;
+  background: #0e4e49;
+  color: rgba(255,255,255,.82);
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  padding: 22px 7px;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+.book-cover {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border-left: 1px solid rgba(255,255,255,.35);
+  border-radius: 0 9px 9px 0;
+  background: #171513;
+  color: #fffaf0;
+  padding: 48px 38px 36px;
+}
+.book-cover::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(circle at 75% 20%, rgba(220, 166, 67, .28), transparent 29%), repeating-linear-gradient(35deg, transparent 0 20px, rgba(255,255,255,.025) 21px 22px);
+}
+.book-cover span, .book-cover strong, .book-cover small, .book-cover i { position: relative; }
+.book-cover span { color: #e1b85e; font-size: 11px; font-weight: 900; letter-spacing: .16em; text-transform: uppercase; }
+.book-cover strong { margin-top: 70px; font-family: Georgia, serif; font-size: clamp(32px, 4vw, 47px); line-height: 1.03; }
+.book-cover i { width: 58px; height: 4px; margin-top: 28px; background: #d8a746; }
+.book-cover small { margin-top: auto; color: #c9c1b5; font-weight: 800; }
+.book-copy h2 { margin: 0; font-size: clamp(38px, 5vw, 64px); line-height: .98; }
+.book-author { margin: 12px 0 22px; color: #7b5a22; font-weight: 900; }
+.book-description { max-width: 650px; color: var(--muted); font-size: 18px; line-height: 1.7; }
+.book-benefits { display: grid; gap: 12px; margin: 24px 0; padding: 0; list-style: none; }
+.book-benefits li { display: flex; align-items: flex-start; gap: 10px; font-weight: 750; line-height: 1.45; }
+.book-benefits svg { flex: 0 0 auto; margin-top: 2px; color: var(--teal); stroke-width: 3; }
+.book-purchase { display: grid; grid-template-columns: auto minmax(190px, 1fr); gap: 18px; align-items: center; margin-top: 28px; }
+.book-purchase > div span { display: block; color: var(--muted); font-size: 12px; font-weight: 850; text-transform: uppercase; letter-spacing: .1em; }
+.book-purchase > div strong { display: block; margin-top: 2px; font-size: 32px; }
+.book-buy, .book-download {
+  min-height: 54px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--ink);
+  color: white;
+  padding: 0 22px;
+  font-weight: 900;
+  text-decoration: none;
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+.book-buy:hover:not(:disabled), .book-download:hover { transform: translateY(-2px); box-shadow: 0 15px 32px rgba(23, 21, 19, .23); }
+.book-buy:disabled { opacity: .58; cursor: wait; }
+.book-assurance { display: flex; flex-wrap: wrap; gap: 10px 20px; margin-top: 17px; color: #365d57; font-size: 13px; font-weight: 800; }
+.book-assurance span { display: inline-flex; align-items: center; gap: 6px; }
+.book-error { color: #a2342d; font-weight: 800; }
+.book-result-page, .legal-page { width: min(850px, calc(100% - 32px)); margin: 0 auto; padding: 64px 0 90px; }
+.book-result-card { position: relative; overflow: hidden; border: 1px solid var(--line); border-radius: 18px; background: rgba(255,253,248,.9); padding: clamp(28px, 6vw, 64px); box-shadow: var(--shadow); text-align: center; }
+.book-result-card h1, .legal-page h1 { margin: 0; font-size: clamp(42px, 7vw, 72px); line-height: 1; }
+.book-result-card > p:not(.eyebrow) { max-width: 570px; margin: 20px auto; color: var(--muted); font-size: 18px; line-height: 1.65; }
+.book-result-card small { display: block; margin-top: 22px; color: var(--muted); }
+.book-download { background: var(--teal); }
+.payment-loader { width: 34px; height: 34px; margin: 28px auto; border: 4px solid #d9d1c2; border-top-color: var(--teal); border-radius: 50%; animation: payment-spin .85s linear infinite; }
+@keyframes payment-spin { to { transform: rotate(360deg); } }
+.legal-page { font-size: 17px; line-height: 1.75; }
+.legal-page h2 { margin-top: 34px; font-size: 28px; }
+.legal-page p { color: #3d3832; }
+.site-footer { width: min(1160px, calc(100% - 32px)); margin: 0 auto; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--line); padding: 24px 0 36px; color: var(--muted); font-size: 14px; }
+.site-footer button { border: 0; background: transparent; color: var(--ink); font-weight: 800; }
+
+@media (max-width: 900px) {
+  .book-section { grid-template-columns: 1fr; }
+  .book-visual { min-height: 410px; grid-template-columns: 28px minmax(0, 280px); }
+}
+
+@media (max-width: 560px) {
+  .book-section { margin-top: 42px; padding: 24px 18px 30px; border-radius: 13px; }
+  .book-visual { min-height: 350px; grid-template-columns: 24px minmax(0, 235px); transform: perspective(900px) rotateY(5deg); }
+  .book-cover { padding: 34px 24px 25px; }
+  .book-cover strong { margin-top: 48px; font-size: 31px; }
+  .book-purchase { grid-template-columns: 1fr; }
+  .book-buy { width: 100%; }
+  .book-assurance { display: grid; }
+  .site-footer { align-items: flex-start; gap: 12px; flex-direction: column; }
 }

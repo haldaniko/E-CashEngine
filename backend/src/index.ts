@@ -14,11 +14,13 @@ import { adminRouter } from './routes/admin';
 import { aiRouter } from './routes/ai';
 import { healthIndexRouter } from './routes/healthIndex';
 import { botRouter } from './routes/bot';
+import { bookRouter, bookWebhookRouter } from './routes/book';
 import { startGenerationScheduler } from './services/generationScheduler';
 
 const app = express();
 const port = Number(process.env.PORT || 4000);
-const corsOrigin = process.env.CORS_ORIGIN || 'http://localhost:3000';
+const corsOrigins = (process.env.CORS_ALLOWED_ORIGINS || process.env.CORS_ORIGIN || 'http://localhost:9005,http://127.0.0.1:9005')
+  .split(',').map((origin) => origin.trim()).filter(Boolean);
 const uploadRoot = process.env.UPLOAD_DIR || path.resolve(process.cwd(), 'uploads');
 
 if (process.env.TRUST_PROXY === 'true' || process.env.NODE_ENV === 'production') {
@@ -28,10 +30,14 @@ if (process.env.TRUST_PROXY === 'true' || process.env.NODE_ENV === 'production')
 app.use(helmet());
 app.use(
   cors({
-    origin: corsOrigin,
+    origin(origin, callback) {
+      if (!origin || corsOrigins.includes(origin)) return callback(null, true);
+      callback(new Error('Origin is not allowed by CORS'));
+    },
     credentials: true,
   }),
 );
+app.use('/api/book/webhook', express.raw({ type: 'application/json', limit: '1mb' }), bookWebhookRouter);
 app.use(express.json({ limit: '8mb' }));
 app.use(cookieParser());
 app.use('/uploads', express.static(uploadRoot, { fallthrough: false }));
@@ -46,6 +52,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/ai', aiRouter);
 app.use('/api/health-index', healthIndexRouter);
+app.use('/api/book', bookRouter);
 app.use(errorHandler);
 
 async function main() {

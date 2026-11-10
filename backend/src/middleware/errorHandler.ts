@@ -10,7 +10,8 @@ export class HttpError extends Error {
 }
 
 export const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
-  const status = error instanceof HttpError ? error.status : 500;
+  const candidate = error instanceof HttpError ? error.status : Number(error?.status);
+  const status = Number.isInteger(candidate) && candidate >= 400 && candidate < 600 ? candidate : 500;
   if (status >= 500) console.error(error);
 
   res.status(status).json({

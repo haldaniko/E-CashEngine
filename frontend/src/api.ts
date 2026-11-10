@@ -33,6 +33,25 @@ export async function subscribe(email: string) {
   );
 }
 
+export type BookConfig = { title: string; author: string; amountCents: number; currency: string };
+export type BookStatus = { status: 'pending' | 'paid' | 'failed'; downloadUrl?: string; expiresIn?: number };
+
+export async function getBookConfig() {
+  return parseData<BookConfig>(await fetch(`${apiUrl}/api/book/config`));
+}
+
+export async function createBookCheckout() {
+  return parseData<{ checkoutUrl: string }>(await fetch(`${apiUrl}/api/book/checkout`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: '{}',
+  }));
+}
+
+export async function getBookStatus(sessionId: string) {
+  return parseData<BookStatus>(await fetch(`${apiUrl}/api/book/status?session_id=${encodeURIComponent(sessionId)}`));
+}
+
 export async function request<T>(path: string, options: RequestInit = {}, token?: string, csrfToken?: string): Promise<T> {
   const headers = new Headers(options.headers);
   headers.set('Content-Type', 'application/json');

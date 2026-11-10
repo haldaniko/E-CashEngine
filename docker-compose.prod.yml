@@ -52,6 +52,7 @@ services:
       - "4105:4000"
     volumes:
       - ./:/host-data
+      - ./private:/app/private:ro
     env_file:
       - ./.env
     environment:

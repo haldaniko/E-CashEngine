@@ -1,6 +1,6 @@
 import { type ChangeEvent, useEffect, useMemo, useState } from 'react';
-import { ArrowRight, BookOpen, Clock, Eye, FilePlus, Menu, RefreshCw, Save, Search, Trash2, Wand2, X } from 'lucide-react';
-import { assetUrl, getPost, getPosts, request, subscribe } from './api';
+import { ArrowRight, BookOpen, Check, Clock, Download, Eye, FilePlus, Menu, RefreshCw, Save, Search, ShieldCheck, Trash2, Wand2, X } from 'lucide-react';
+import { apiUrl, assetUrl, createBookCheckout, getBookConfig, getBookStatus, getPost, getPosts, request, subscribe, type BookConfig } from './api';
 import { trackPageView } from './analytics';
 import type { AdminSettings, Article, Post } from './domain';
 
@@ -69,6 +69,15 @@ function navigate(path: string) {
   window.history.pushState({}, '', path);
   window.dispatchEvent(new Event('app:navigate'));
   window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function goToBook() {
+  if (window.location.pathname !== '/') {
+    navigate('/#book');
+    window.setTimeout(() => document.getElementById('book')?.scrollIntoView({ behavior: 'smooth' }), 50);
+    return;
+  }
+  document.getElementById('book')?.scrollIntoView({ behavior: 'smooth' });
 }
 
 function SocialIcon({ name }: { name: "x" | "threads" | "telegram" | "linkedin" }) {
@@ -153,6 +162,7 @@ function Header() {
           {links.map((link) => (
             <button key={link.href} onClick={() => navigate(link.href)}>{link.label}</button>
           ))}
+          <button onClick={goToBook}>Book</button>
         </nav>
 
         <div className="header-signal" aria-label="Editorial signal">
@@ -169,6 +179,7 @@ function Header() {
             {links.map((link) => (
               <button key={link.href} onClick={() => { setOpen(false); navigate(link.href); }}>{link.label}</button>
             ))}
+            <button onClick={() => { setOpen(false); goToBook(); }}>Book</button>
           </div>
         )}
       </div>
@@ -285,6 +296,64 @@ function Newsletter() {
   );
 }
 
+function BookSection() {
+  const [config, setConfig] = useState<BookConfig | null>(null);
+  const [message, setMessage] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    getBookConfig().then(setConfig).catch((error) => setMessage(error instanceof Error ? error.message : 'Could not load the book.'));
+  }, []);
+
+  async function buy() {
+    setBusy(true);
+    setMessage('');
+    try {
+      const { checkoutUrl } = await createBookCheckout();
+      window.location.assign(checkoutUrl);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Checkout is temporarily unavailable.');
+      setBusy(false);
+    }
+  }
+
+  const price = config ? new Intl.NumberFormat('en', { style: 'currency', currency: config.currency.toUpperCase() }).format(config.amountCents / 100) : '—';
+  return (
+    <section className="book-section" id="book" aria-labelledby="book-title">
+      <div className="book-visual" aria-hidden="true">
+        <div className="book-spine">e-CashEngine</div>
+        <div className="book-cover">
+          <span>Field guide · 2026</span>
+          <strong>{config?.title || '[НАЗВАНИЕ КНИГИ]'}</strong>
+          <i />
+          <small>{config?.author || '[ИМЯ АВТОРА]'}</small>
+        </div>
+      </div>
+      <div className="book-copy">
+        <p className="eyebrow">The complete digital playbook</p>
+        <h2 id="book-title">{config?.title || '[НАЗВАНИЕ КНИГИ]'}</h2>
+        <p className="book-author">By {config?.author || '[ИМЯ АВТОРА]'}</p>
+        <p className="book-description">A focused, practical guide to building online income systems you can understand, test, and improve—without shortcuts or empty promises.</p>
+        <ul className="book-benefits">
+          <li><Check size={18} /> Turn scattered ideas into a clear, repeatable plan</li>
+          <li><Check size={18} /> Choose channels that fit your skills and available time</li>
+          <li><Check size={18} /> Validate offers before investing heavily</li>
+          <li><Check size={18} /> Use practical checklists and next-step frameworks</li>
+        </ul>
+        <div className="book-purchase">
+          <div><span>Digital edition</span><strong>{price}</strong></div>
+          <button className="book-buy" onClick={buy} disabled={busy || !config}>{busy ? 'Opening secure checkout…' : 'Buy the book'} <ArrowRight size={19} /></button>
+        </div>
+        <div className="book-assurance">
+          <span><ShieldCheck size={17} /> Secure payment via Stripe</span>
+          <span><Download size={17} /> PDF · instant access after payment</span>
+        </div>
+        {message && <p className="book-error" role="alert">{message}</p>}
+      </div>
+    </section>
+  );
+}
+
 function HomePage({ articles }: { articles: Article[] }) {
   const featured = articles[0];
   return (
@@ -296,6 +365,7 @@ function HomePage({ articles }: { articles: Article[] }) {
         <p>No overnight-rich promises. Just focused guides for affiliate content, AI services, freelancing, ecommerce, and digital products.</p>
       </section>
       <ArticleGrid articles={articles.slice(0, 6)} />
+      <BookSection />
       <Newsletter />
     </main>
   );
@@ -349,6 +419,85 @@ function ArticlePage({ article }: { article?: Article }) {
       <button className="secondary-action" onClick={() => navigate('/articles')}>Back to all articles</button>
     </main>
   );
+}
+
+function BookSuccessPage({ sessionId }: { sessionId: string }) {
+  const [status, setStatus] = useState<'checking' | 'pending' | 'paid' | 'failed' | 'error'>('checking');
+  const [downloadUrl, setDownloadUrl] = useState('');
+  const [message, setMessage] = useState('Verifying your payment…');
+
+  useEffect(() => {
+    if (!sessionId) {
+      setStatus('error');
+      setMessage('The Checkout Session ID is missing. Return to the book section and try again.');
+      return;
+    }
+    let stopped = false;
+    let timer = 0;
+    let attempts = 0;
+    const check = async () => {
+      try {
+        const result = await getBookStatus(sessionId);
+        if (stopped) return;
+        if (result.status === 'paid' && result.downloadUrl) {
+          setStatus('paid');
+          setDownloadUrl(`${apiUrl}${result.downloadUrl}`);
+          setMessage('Payment confirmed. Your private download is ready.');
+          return;
+        }
+        if (result.status === 'failed') {
+          setStatus('failed');
+          setMessage('The payment was not completed. No charge has been confirmed.');
+          return;
+        }
+        setStatus('pending');
+        setMessage('Stripe is still confirming the payment. This page will update automatically.');
+        attempts += 1;
+        if (attempts < 30) timer = window.setTimeout(check, 2000);
+        else setMessage('Confirmation is taking longer than usual. Refresh this page in a moment.');
+      } catch (error) {
+        if (stopped) return;
+        setStatus('error');
+        setMessage(error instanceof Error ? error.message : 'Could not verify the payment.');
+      }
+    };
+    check();
+    return () => { stopped = true; window.clearTimeout(timer); };
+  }, [sessionId]);
+
+  return (
+    <main className="book-result-page">
+      <div className={`book-result-card ${status}`}>
+        <p className="eyebrow">Digital book order</p>
+        <h1>{status === 'paid' ? 'Your book is ready' : status === 'failed' ? 'Payment incomplete' : 'Checking your payment'}</h1>
+        <p>{message}</p>
+        {status === 'paid' && <a className="book-download" href={downloadUrl}><Download size={20} /> Download PDF</a>}
+        {(status === 'failed' || status === 'error') && <button className="secondary-action" onClick={goToBook}>Return to the book</button>}
+        {(status === 'checking' || status === 'pending') && <div className="payment-loader" aria-label="Waiting for payment confirmation" />}
+        <small>Download links expire automatically and only work for paid orders.</small>
+      </div>
+    </main>
+  );
+}
+
+function PrivacyPage() {
+  return (
+    <main className="legal-page">
+      <p className="eyebrow">Legal</p>
+      <h1>Privacy Policy</h1>
+      <p>When you buy the digital book, we process the email address collected by Stripe, the Stripe Checkout Session ID, Payment Intent ID, order amount, currency, and payment status. We use this information only to confirm the purchase, provide secure access to the PDF, prevent fraud, and support the order.</p>
+      <h2>Payments</h2>
+      <p>Card and banking details are processed directly by Stripe through Stripe Hosted Checkout. They are never received or stored by this website. Stripe processes payment information under its own privacy terms.</p>
+      <h2>Order records and access</h2>
+      <p>Order metadata is retained in our private database for transaction support and accounting. Download links are signed, expire automatically, and do not reveal the private file path.</p>
+      <h2>Your choices</h2>
+      <p>You may contact the site operator to ask about, correct, or request deletion of personal data where applicable law allows it.</p>
+    </main>
+  );
+}
+
+function Footer() {
+  return <footer className="site-footer"><span>© {new Date().getFullYear()} e-CashEngine</span><button onClick={() => navigate('/privacy')}>Privacy Policy</button></footer>;
 }
 
 function AdminPanel() {
@@ -696,6 +845,7 @@ export default function App() {
   const [path] = route.split('?');
   const searchParams = new URLSearchParams(route.includes('?') ? route.slice(route.indexOf('?')) : '');
   const initialSearch = searchParams.get('search') || '';
+  const sessionId = searchParams.get('session_id') || '';
   const slug = path.startsWith('/articles/') ? decodeURIComponent(path.replace('/articles/', '')) : '';
   const article = slug ? articles.find((item) => item.slug === slug) : undefined;
 
@@ -708,7 +858,8 @@ export default function App() {
     <>
       <Header />
       {error && <div className="load-error">{error}</div>}
-      {path === '/admin' ? <AdminPanel /> : path === '/articles' ? <ArticlesPage articles={articles} initialQuery={initialSearch} /> : slug ? <ArticlePage article={article} /> : <HomePage articles={articles} />}
+      {path === '/admin' ? <AdminPanel /> : path === '/book/success' ? <BookSuccessPage sessionId={sessionId} /> : path === '/privacy' ? <PrivacyPage /> : path === '/articles' ? <ArticlesPage articles={articles} initialQuery={initialSearch} /> : slug ? <ArticlePage article={article} /> : <HomePage articles={articles} />}
+      <Footer />
     </>
   );
 }

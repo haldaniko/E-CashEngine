@@ -7,8 +7,10 @@ env.local
 **/.env
 **/.env.*
 !/.env.sample
+!/.env.example
 backend/data/
 /db.sqlite3
 /db.sqlite3-*
 /.db.sqlite3.importing*
 /media/
+/private/

@@ -35,6 +35,39 @@ Production runtime data lives in root-level `db.sqlite3` and `media/` on the Lin
 - Multiple scheduled generation times per day
 - OpenRouter generation with sanitized HTML before storage
 - Audit events for login, settings, post changes, and generation
+- Digital-book sales with Stripe Hosted Checkout, webhook-confirmed orders, and expiring private PDF downloads
+
+## Digital book and Stripe
+
+Put the sellable PDF at `private/book.pdf` in the project root. The whole `private/` directory is ignored by Git and mounted read-only at `/app/private` in the backend container; never place the book under `frontend/public`, `media`, or another public static directory.
+
+Set these values in the root `.env` (see `.env.example`):
+
+```bash
+STRIPE_SECRET_KEY=sk_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+BOOK_TITLE=Your book title
+BOOK_AUTHOR=Author name
+BOOK_PRICE_CENTS=1900
+BOOK_CURRENCY=eur
+BOOK_FILE_PATH=/app/private/book.pdf
+BOOK_DOWNLOAD_MAX_AGE=86400
+BOOK_DOWNLOAD_SECRET=a-long-random-secret
+SITE_URL=http://localhost:9005
+CORS_ALLOWED_ORIGINS=http://localhost:9005,http://127.0.0.1:9005
+```
+
+`BOOK_PRICE_CENTS` and `BOOK_CURRENCY` are read only by the backend. The browser cannot submit a price. `BOOK_DOWNLOAD_SECRET` must be long, random, stable across restarts, and different in each environment. `SITE_URL` must be the browser-facing origin so Stripe returns buyers to the correct frontend (`http://localhost:9005` locally and the HTTPS domain in production).
+
+In Stripe, register this webhook URL:
+
+```text
+https://YOUR-DOMAIN/api/book/webhook
+```
+
+Subscribe it to `checkout.session.completed` and `checkout.session.async_payment_succeeded`, then copy its signing secret to `STRIPE_WEBHOOK_SECRET`. For local webhook forwarding, use Stripe CLI and forward to `http://localhost:4000/api/book/webhook`.
+
+The backend creates `book_orders` and `stripe_events` during the existing idempotent SQLite schema bootstrap. Webhook event IDs are stored to make repeat delivery safe. The success page may reconcile a paid Checkout Session while it polls, but the signed webhook remains the normal confirmation path.
 
 ## Telegram editorial bot
 
@@ -69,7 +102,7 @@ This builds `ecashengine-backend-dev` and `ecashengine-frontend-dev` with `DOCKE
 
 Services:
 
-- Frontend: `http://localhost:3000`
+- Frontend: `http://localhost:9005`
 - Backend: `http://localhost:4000`
 - Redis runs inside Docker; SQLite and uploaded images live in the project root on the host.
 
@@ -109,7 +142,7 @@ npm run setup:env
 
 `JWT_SECRET` signs short-lived access tokens. `REFRESH_TOKEN_SECRET` hashes refresh tokens before storage. Keep both stable across deploys; rotating them logs users out.
 
-For production, edit the root `.env`: set `SITE_URL=https://e-cashingengine.com`, `CORS_ORIGIN=https://e-cashingengine.com`, `VITE_API_URL=https://e-cashingengine.com`, and `OPENROUTER_SITE_URL=https://e-cashingengine.com`. Preserve the generated secrets and any existing import credentials. Local and production deployments each keep their own private `.env`; `.env.sample` is the shared template. Compose sets `NODE_ENV` for each deployment. `VITE_API_URL` and `VITE_GA_MEASUREMENT_ID` are used for the browser build.
+For production, edit the root `.env`: set `SITE_URL=https://e-cashingengine.com`, `CORS_ORIGIN=https://e-cashingengine.com`, `CORS_ALLOWED_ORIGINS=https://e-cashingengine.com`, `VITE_API_URL=https://e-cashingengine.com`, and `OPENROUTER_SITE_URL=https://e-cashingengine.com`. Add the Stripe and book settings described above. Preserve the generated secrets and any existing import credentials. Local and production deployments each keep their own private `.env`; `.env.sample` and `.env.example` are the shared templates. Compose sets `NODE_ENV` for each deployment. `VITE_API_URL` and `VITE_GA_MEASUREMENT_ID` are used for the browser build.
 
 Production refuses to start if required secrets are missing, equal, too short, or production URLs point to localhost.
 
@@ -164,6 +197,11 @@ npm run dev
 - `POST /api/admin/media/covers`
 - `DELETE /api/admin/media/covers/:name`
 - `POST /api/ai/generate-article`
+- `GET /api/book/config`
+- `POST /api/book/checkout`
+- `POST /api/book/webhook`
+- `GET /api/book/status?session_id=...`
+- `GET /api/book/download/:signedToken`
 
 ## Backups
 
@@ -177,7 +215,7 @@ Useful checks:
 docker compose config
 docker compose up -d --build
 curl http://localhost:4000/api/health
-curl -I http://localhost:3000/
+curl -I http://localhost:9005/
 curl http://localhost:4000/api/posts
 docker compose -f docker-compose.prod.yml config --services
 curl http://localhost:4105/api/health
