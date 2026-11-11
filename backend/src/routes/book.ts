@@ -45,6 +45,20 @@ function siteUrl() {
   return (process.env.SITE_URL || 'http://localhost:9005').replace(/\/$/, '');
 }
 
+function bookFilePath() {
+  const fileName = process.env.BOOK_FILE_NAME || 'book.pdf';
+  if (fileName !== path.basename(fileName) || path.extname(fileName).toLowerCase() !== '.pdf') {
+    throw Object.assign(new Error('BOOK_FILE_NAME must be a PDF filename without a directory'), { status: 500 });
+  }
+  const privateDirectories = [
+    path.resolve(process.cwd(), 'private'),
+    path.resolve(process.cwd(), '../private'),
+    path.resolve('/app/private'),
+  ];
+  const existing = privateDirectories.map((directory) => path.join(directory, fileName)).find(existsSync);
+  return existing || path.join(privateDirectories[0], fileName);
+}
+
 function paymentDetails(session: Stripe.Checkout.Session) {
   return {
     paymentIntentId: typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id,
@@ -113,7 +127,7 @@ bookRouter.get('/download/:token', (req, res, next) => {
     const orderId = verifyDownloadToken(req.params.token);
     const order = orderId ? getBookOrder(orderId) : null;
     if (!orderId || !order || order.status !== 'paid') return res.status(403).json({ error: 'This download link is invalid or has expired' });
-    const filePath = path.resolve(process.env.BOOK_FILE_PATH || '/app/private/book.pdf');
+    const filePath = bookFilePath();
     if (!existsSync(filePath)) return res.status(503).json({ error: 'The book file is not available. Please contact support.' });
     res.download(filePath, `${(process.env.BOOK_TITLE || 'digital-book').replace(/[^a-z0-9_-]+/gi, '-')}.pdf`);
   } catch (error) {

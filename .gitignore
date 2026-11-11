@@ -6,7 +6,6 @@ env.local
 *.log
 **/.env
 **/.env.*
-!/.env.sample
 !/.env.example
 backend/data/
 /db.sqlite3

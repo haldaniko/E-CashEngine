@@ -2,12 +2,12 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 
 const file = '.env';
-const sample = '.env.sample';
+const template = '.env.example';
 const existed = fs.existsSync(file);
 const lines = existed
   ? fs.readFileSync(file, 'utf8').split(/\r?\n/)
-  : fs.readFileSync(sample, 'utf8').split(/\r?\n/);
-const sampleLines = fs.readFileSync(sample, 'utf8').split(/\r?\n/);
+  : fs.readFileSync(template, 'utf8').split(/\r?\n/);
+const templateLines = fs.readFileSync(template, 'utf8').split(/\r?\n/);
 const legacyFiles = ['.env.production', 'backend/.env.production', 'backend/.env'];
 const legacy = legacyFiles.map((name) => fs.existsSync(name) ? fs.readFileSync(name, 'utf8').split(/\r?\n/) : []);
 
@@ -26,7 +26,7 @@ function set(key, next) {
   else lines[index] = `${key}=${next}`;
 }
 
-for (const line of sampleLines) {
+for (const line of templateLines) {
   if (!/^[A-Za-z_][A-Za-z0-9_]*=/.test(line)) continue;
   const key = line.slice(0, line.indexOf('='));
   const current = value(key);

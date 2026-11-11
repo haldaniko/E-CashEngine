@@ -50,14 +50,14 @@ BOOK_TITLE=Your book title
 BOOK_AUTHOR=Author name
 BOOK_PRICE_CENTS=1900
 BOOK_CURRENCY=eur
-BOOK_FILE_PATH=/app/private/book.pdf
+BOOK_FILE_NAME=book.pdf
 BOOK_DOWNLOAD_MAX_AGE=86400
 BOOK_DOWNLOAD_SECRET=a-long-random-secret
 SITE_URL=http://localhost:9005
 CORS_ALLOWED_ORIGINS=http://localhost:9005,http://127.0.0.1:9005
 ```
 
-`BOOK_PRICE_CENTS` and `BOOK_CURRENCY` are read only by the backend. The browser cannot submit a price. `BOOK_DOWNLOAD_SECRET` must be long, random, stable across restarts, and different in each environment. `SITE_URL` must be the browser-facing origin so Stripe returns buyers to the correct frontend (`http://localhost:9005` locally and the HTTPS domain in production).
+`BOOK_FILE_NAME` is only a filename, not a path. The backend rejects directory components and always reads it from the private `private/` directory. `BOOK_PRICE_CENTS` and `BOOK_CURRENCY` are read only by the backend. The browser cannot submit a price. `BOOK_DOWNLOAD_SECRET` must be long, random, stable across restarts, and different in each environment. `SITE_URL` must be the browser-facing origin so Stripe returns buyers to the correct frontend (`http://localhost:9005` locally and the HTTPS domain in production).
 
 In Stripe, register this webhook URL:
 
@@ -142,7 +142,7 @@ npm run setup:env
 
 `JWT_SECRET` signs short-lived access tokens. `REFRESH_TOKEN_SECRET` hashes refresh tokens before storage. Keep both stable across deploys; rotating them logs users out.
 
-For production, edit the root `.env`: set `SITE_URL=https://e-cashingengine.com`, `CORS_ORIGIN=https://e-cashingengine.com`, `CORS_ALLOWED_ORIGINS=https://e-cashingengine.com`, `VITE_API_URL=https://e-cashingengine.com`, and `OPENROUTER_SITE_URL=https://e-cashingengine.com`. Add the Stripe and book settings described above. Preserve the generated secrets and any existing import credentials. Local and production deployments each keep their own private `.env`; `.env.sample` and `.env.example` are the shared templates. Compose sets `NODE_ENV` for each deployment. `VITE_API_URL` and `VITE_GA_MEASUREMENT_ID` are used for the browser build.
+For production, edit the root `.env`: set `SITE_URL=https://e-cashingengine.com`, `CORS_ORIGIN=https://e-cashingengine.com`, `CORS_ALLOWED_ORIGINS=https://e-cashingengine.com`, `VITE_API_URL=https://e-cashingengine.com`, and `OPENROUTER_SITE_URL=https://e-cashingengine.com`. Add the Stripe and book settings described above. Preserve the generated secrets and any existing import credentials. Local and production deployments each keep their own private `.env`; `.env.example` is the single shared template. Compose sets `NODE_ENV` for each deployment. `VITE_API_URL` and `VITE_GA_MEASUREMENT_ID` are used for the browser build.
 
 Production refuses to start if required secrets are missing, equal, too short, or production URLs point to localhost.
 

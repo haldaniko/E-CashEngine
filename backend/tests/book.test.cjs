@@ -6,12 +6,16 @@ const path = require('node:path');
 const express = require('express');
 const request = require('supertest');
 
+const originalCwd = process.cwd();
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ecash-book-test-'));
-const pdfPath = path.join(root, 'book.pdf');
+const privateDirectory = path.join(root, 'private');
+fs.mkdirSync(privateDirectory);
+const pdfPath = path.join(privateDirectory, 'book.pdf');
 fs.writeFileSync(pdfPath, Buffer.from('%PDF-1.4 test-book'));
+process.chdir(root);
 process.env.NODE_ENV = 'test';
 process.env.DATABASE_PATH = path.join(root, 'test.sqlite3');
-process.env.BOOK_FILE_PATH = pdfPath;
+process.env.BOOK_FILE_NAME = 'book.pdf';
 process.env.BOOK_TITLE = 'Server Book';
 process.env.BOOK_AUTHOR = 'Server Author';
 process.env.BOOK_PRICE_CENTS = '1900';
@@ -65,6 +69,7 @@ app.use(errorHandler);
 
 after(() => {
   database.close();
+  process.chdir(originalCwd);
   fs.rmSync(root, { recursive: true, force: true });
 });
 
